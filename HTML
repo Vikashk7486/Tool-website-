@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>पूर्ण विवरण EMI कैलकुलेटर</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --secondary: #60a5fa;
+            --accent: #10b981;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: #f3f4f6;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 2rem;
+        }
+
+        .input-section {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .input-group {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        input[type="number"], input[type="range"] {
+            width: 100%;
+            padding: 0.5rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.25rem;
+        }
+
+        .charges-section {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .results {
+            margin-top: 2rem;
+        }
+
+        .payment-breakup {
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1rem 0;
+        }
+
+        .amortization-table {
+            max-height: 500px;
+            overflow-y: auto;
+            margin-top: 2rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: center;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        th {
+            background: #f3f4f6;
+        }
+
+        .chart-container {
+            height: 400px;
+            margin: 2rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="text-align: center; margin-bottom: 2rem; color: var(--primary);">विस्तृत EMI कैलकुलेटर</h1>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <label>लोन राशि (₹)</label>
+                <input type="number" id="loanAmount" value="5000000">
+                <input type="range" id="loanAmountRange" min="100000" max="50000000" value="5000000">
+            </div>
+
+            <div class="input-group">
+                <label>ब्याज दर (%)</label>
+                <input type="number" id="interestRate" step="0.1" value="8.5">
+                <input type="range" id="interestRateRange" min="5" max="20" step="0.1" value="8.5">
+            </div>
+
+            <div class="input-group">
+                <label>अवधि (वर्ष)</label>
+                <input type="number" id="loanTenure" value="20">
+                <input type="range" id="loanTenureRange" min="1" max="30" value="20">
+            </div>
+        </div>
+
+        <div class="charges-section">
+            <div class="input-group">
+                <label>प्रोसेसिंग फीस (%)</label>
+                <input type="number" id="processingFee" value="1">
+            </div>
+            
+            <div class="input-group">
+                <label>GST (18%)</label>
+                <input type="number" id="gst" value="18" readonly>
+            </div>
+
+            <div class="input-group">
+                <label>बीमा (वार्षिक)</label>
+                <input type="number" id="insurance" value="5000">
+            </div>
+
+            <div class="input-group">
+                <label>अन्य शुल्क</label>
+                <input type="number" id="otherCharges" value="0">
+            </div>
+        </div>
+
+        <button onclick="calculateEMI()" style="width: 100%; padding: 1rem; background: var(--primary); color: white; border: none; border-radius: 0.5rem; cursor: pointer;">
+            गणना करें
+        </button>
+
+        <div class="results">
+            <div class="payment-breakup">
+                <h3>मासिक भुगतान विवरण</h3>
+                <p>मूल EMI: ₹<span id="baseEmi">0</span></p>
+                <p>GST: ₹<span id="gstAmount">0</span></p>
+                <p>बीमा: ₹<span id="insuranceAmount">0</span></p>
+                <p>कुल मासिक भुगतान: ₹<span id="totalEmi">0</span></p>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="paymentChart"></canvas>
+            </div>
+
+            <div class="amortization-table">
+                <h3>मासिक भुगतान अनुसूची</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>माह</th>
+                            <th>मूलधन</th>
+                            <th>ब्याज</th>
+                            <th>GST</th>
+                            <th>बीमा</th>
+                            <th>अन्य शुल्क</th>
+                            <th>कुल भुगतान</th>
+                        </tr>
+                    </thead>
+                    <tbody id="amortizationBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const formatter = new Intl.NumberFormat('en-IN');
+
+        // इनपुट सिंक्रोनाइज़ेशन
+        document.querySelectorAll('input[type="range"]').forEach(range => {
+            const numberInput = document.getElementById(range.id.replace('Range', ''));
+            range.addEventListener('input', () => {
+                numberInput.value = range.value;
+                calculateEMI();
+            });
+            numberInput.addEventListener('input', () => {
+                range.value = numberInput.value;
+                calculateEMI();
+            });
+        });
+
+        function calculateEMI() {
+            const loanAmount = parseFloat(document.getElementById('loanAmount').value);
+            const interestRate = parseFloat(document.getElementById('interestRate').value);
+            const tenureYears = parseFloat(document.getElementById('loanTenure').value);
+            const processingFeePercent = parseFloat(document.getElementById('processingFee').value);
+            const gstPercent = parseFloat(document.getElementById('gst').value);
+            const insurance = parseFloat(document.getElementById('insurance').value);
+            const otherCharges = parseFloat(document.getElementById('otherCharges').value);
+
+            // मूल EMI गणना
+            const monthlyRate = interestRate / 1200;
+            const months = tenureYears * 12;
+            const emi = (loanAmount * monthlyRate * Math.pow(1 + monthlyRate, months)) / 
+                        (Math.pow(1 + monthlyRate, months) - 1);
+
+            // अतिरिक्त शुल्क
+            const processingFee = (loanAmount * processingFeePercent) / 100;
+            const gstAmount = (processingFee * gstPercent) / 100;
+            const monthlyInsurance = insurance / 12;
+            const monthlyOtherCharges = otherCharges / 12;
+
+            // कुल मासिक भुगतान
+            const totalMonthlyPayment = emi + monthlyInsurance + monthlyOtherCharges;
+
+            // परिणाम अपडेट
+            document.getElementById('baseEmi').textContent = formatter.format(emi.toFixed(0));
+            document.getElementById('gstAmount').textContent = formatter.format((gstAmount/12).toFixed(0));
+            document.getElementById('insuranceAmount').textContent = formatter.format(monthlyInsurance.toFixed(0));
+            document.getElementById('totalEmi').textContent = formatter.format(totalMonthlyPayment.toFixed(0));
+
+            // भुगतान अनुसूची
+            updateAmortizationTable(loanAmount, monthlyRate, months, emi, 
+                                 gstAmount/12, monthlyInsurance, monthlyOtherCharges);
+            
+            // चार्ट अपडेट
+            updateChart(emi, monthlyInsurance, monthlyOtherCharges);
+        }
+
+        function updateAmortizationTable(principal, monthlyRate, months, emi, gst, insurance, other) {
+            let balance = principal;
+            let tableHTML = '';
+            
+            for(let month = 1; month <= months; month++) {
+                const interest = balance * monthlyRate;
+                const principalPaid = emi - interest;
+                balance -= principalPaid;
+
+                const totalPayment = emi + insurance + other + gst;
+
+                tableHTML += `
+                    <tr>
+                        <td>${month}</td>
+                        <td>₹${formatter.format(principalPaid.toFixed(0))}</td>
+                        <td>₹${formatter.format(interest.toFixed(0))}</td>
+                        <td>₹${formatter.format(gst.toFixed(0))}</td>
+                        <td>₹${formatter.format(insurance.toFixed(0))}</td>
+                        <td>₹${formatter.format(other.toFixed(0))}</td>
+                        <td>₹${formatter.format(totalPayment.toFixed(0))}</td>
+                    </tr>
+                `;
+            }
+
+            document.getElementById('amortizationBody').innerHTML = tableHTML;
+        }
+
+        let paymentChart;
+        function updateChart(emi, insurance, other) {
+            const ctx = document.getElementById('paymentChart').getContext('2d');
+            if(paymentChart) paymentChart.destroy();
+            
+            paymentChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['भुगतान विवरण'],
+                    datasets: [
+                        {
+                            label: 'मूल EMI',
+                            data: [emi],
+                            backgroundColor: '#3b82f6'
+                        },
+                        {
+                            label: 'बीमा',
+                            data: [insurance],
+                            backgroundColor: '#10b981'
+                        },
+                        {
+                            label: 'अन्य शुल्क',
+                            data: [other],
+                            backgroundColor: '#64748b'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { stacked: true },
+                        y: { stacked: true }
+                    }
+                }
+            });
+        }
+
+        // प्रारंभिक गणना
+        calculateEMI();
+    </script>
+</body>
+</html>
